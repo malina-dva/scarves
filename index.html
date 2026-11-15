@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Our Scarf Collection</title>
+<style>
+:root{--bg:#faf6f0;--card:#fff;--text:#2e2a26;--muted:#7a716a;--accent:#b8553a;--line:#e8dfd3;color-scheme:light}
+@media (prefers-color-scheme:dark){:root{--bg:#1e1b19;--card:#2a2623;--text:#f0e9e1;--muted:#a89e94;--accent:#e08a6e;--line:#3d3733;color-scheme:dark}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:Georgia,'Times New Roman',serif;line-height:1.5}
+header{text-align:center;padding:2rem 1rem 1rem}
+h1{margin:0;font-size:2rem}
+header p{color:var(--muted);margin:.3rem 0 1rem}
+input{font:inherit;width:min(92%,300px);padding:.55rem;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--text)}
+main{max-width:980px;margin:0 auto;padding:1rem}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:1rem}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden;display:flex;flex-direction:column}
+.main,.ph{width:100%;aspect-ratio:1;object-fit:cover;background:var(--line);display:flex;align-items:center;justify-content:center;font-size:3rem;cursor:zoom-in}
+.ph{cursor:default}
+.thumbs{display:flex;gap:4px;padding:4px 4px 0}
+.thumbs img{width:48px;height:48px;border-radius:6px;object-fit:cover;cursor:pointer;opacity:.65}
+.thumbs img.on{opacity:1;outline:2px solid var(--accent)}
+.body{padding:.8rem;display:flex;flex-direction:column;gap:.25rem}
+.body h3{margin:0;font-size:1.1rem}
+.meta{color:var(--muted);font-size:.88rem}
+.stars{color:var(--accent)}
+.empty{text-align:center;color:var(--muted);padding:2rem;grid-column:1/-1}
+dialog{border:0;border-radius:12px;padding:.5rem;width:min(95vw,800px);background:var(--card)}
+dialog::backdrop{background:rgba(0,0,0,.6)}
+dialog img{width:100%;border-radius:8px;display:block}
+</style>
+</head>
+<body>
+<header>
+  <h1>🧶 Our Scarf Collection</h1>
+  <p id="count">Knitted together, one stitch at a time</p>
+  <input id="search" type="search" placeholder="Search scarves…">
+</header>
+<main><div id="grid" class="grid"></div></main>
+<dialog id="lb"><img id="lbimg" alt="" onclick="this.closest('dialog').close()"></dialog>
+<script>
+let items=[];
+const $=id=>document.getElementById(id);
+const esc=s=>String(s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const pics=i=>i.photos&&i.photos.length?i.photos:(i.photo?[i.photo]:[]);
+function render(){
+  const q=$('search').value.toLowerCase();
+  const list=items.filter(i=>JSON.stringify({...i,photos:0,photo:0}).toLowerCase().includes(q))
+    .sort((a,b)=>(b.date||'').localeCompare(a.date||'')||b.id-a.id);
+  $('count').textContent=items.length?`${items.length} scarves knitted so far`:'Knitted together, one stitch at a time';
+  $('grid').innerHTML=list.length?list.map(i=>{const p=pics(i);return `<div class="card">
+    ${p.length?`<img class="main" src="${p[0]}" alt="${esc(i.name)}">`:'<div class="ph">🧣</div>'}
+    ${p.length>1?`<div class="thumbs">${p.map((x,n)=>`<img data-t="${n}" class="${n?'':'on'}" src="${x}" alt="">`).join('')}</div>`:''}
+    <div class="body"><h3>${esc(i.name)||'Untitled scarf'}</h3>
+    ${i.rating>0?`<div class="stars">${'★'.repeat(i.rating)}${'☆'.repeat(5-i.rating)}</div>`:''}
+    <div class="meta">${[i.date,i.by&&'by '+i.by].filter(Boolean).map(esc).join(' · ')}</div>
+    <div class="meta">${[i.colors,i.yarn,i.stitch,i.size].filter(Boolean).map(esc).join(' · ')}</div>
+    ${i.notes?`<div>${esc(i.notes)}</div>`:''}</div></div>`}).join(''):'<div class="empty">'+(items.length?'No scarves match your search.':'No scarves to show yet.')+'</div>';
+}
+$('grid').onclick=e=>{
+  const card=e.target.closest('.card');if(!card)return;
+  if(e.target.dataset.t!==undefined){
+    card.querySelector('.main').src=e.target.src;
+    card.querySelectorAll('.thumbs img').forEach(t=>t.classList.toggle('on',t===e.target));
+  }else if(e.target.classList.contains('main')){$('lbimg').src=e.target.src;$('lb').showModal()}
+};
+$('search').oninput=render;
+fetch('scarves.json',{cache:'no-cache'}).then(r=>{if(!r.ok)throw 0;return r.json()}).then(a=>{items=Array.isArray(a)?a:[];render()})
+  .catch(()=>{$('grid').innerHTML='<div class="empty">Could not load scarves.json. Make sure it sits in the same folder as this page.</div>'});
+</script>
+</body>
+</html>
